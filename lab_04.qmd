@@ -16,12 +16,23 @@ This lab accompanies the Week 4 notes, [*Data Wrangling I - Loading, Cleaning an
 
 ### Task 1: Loading Data
 
-- [ ] The directory `data/part1/` contains three data files. Load them into `R` using `tidyverse`. (Hint: the three files are not all formatted in the same way.)
-- [ ] By default, each `read_*` function prints a message describing the columns it has read. Make sure these messages are hidden.
-- [ ] For each of the files, display the first few rows of the file.
+- [x] The directory `data/part1/` contains three data files. Load them into `R` using `tidyverse`. (Hint: the three files are not all formatted in the same way.)
+- [x] By default, each `read_*` function prints a message describing the columns it has read. Make sure these messages are hidden.
+- [x] For each of the files, display the first few rows of the file.
 
 ::: {.solution}
+#| message: false
+```{r}
+library(tidyverse)
+data1 <- read_csv("data/part1/data1.csv")
+head(data1)
 
+data2 <- read_tsv("data/part1/data2.txt")
+head(data2)
+
+data3 <- read_delim("data/part1/data3",delim = ";")
+head(data3)
+```
 :::
 
 ### Task 1b: Checking Loaded Data
@@ -32,42 +43,96 @@ In this task we will look more closely at the three files from Task 1.
 
 The file `data3` contains information about books in a bookshop.
 
-- [ ] Look at the type of each column. Is the `ISBN` column stored sensibly? (Hint: an ISBN is an identifier; would it make sense to add two ISBNs together? What would happen to an ISBN that starts with a `0`?)
-- [ ] Reload the file so that `ISBN` is stored as text. (Hint: look up the `col_types` argument of `read_delim`, and the `cols` and `col_character` functions.)
-- [ ] `readr` also has a function called `read_csv2`, which reads files that use `;` as a delimiter. Try loading `data3` with `read_csv2` instead. Compare the `PriceUSD` and `AvgRating` columns to the raw file. What has gone wrong?
+- [x] Look at the type of each column. Is the `ISBN` column stored sensibly? (Hint: an ISBN is an identifier; would it make sense to add two ISBNs together? What would happen to an ISBN that starts with a `0`?)
+- [x] Reload the file so that `ISBN` is stored as text. (Hint: look up the `col_types` argument of `read_delim`, and the `cols` and `col_character` functions.)
+- [x] `readr` also has a function called `read_csv2`, which reads files that use `;` as a delimiter. Try loading `data3` with `read_csv2` instead. Compare the `PriceUSD` and `AvgRating` columns to the raw file. What has gone wrong?
 
 ::: {.solution}
-
+```{r}
+data3_csv2 <- read_csv2(
+  "data/part1/data3",
+  col_types = cols(ISBN = col_character())
+)
+head(data3_csv2 |> select(PriceUSD, AvgRating))
+```
+read_csv2() uses a comma as the decimal mark and treats dots as grouping marks. Therefore, 14.99 becomes 1499 and 4.2 becomes 42. The numeric values are incorrect.
 :::
 
 The file `data1.csv` contains student scores from two tests, with their average.
 
-- [ ] How are missing scores recorded in the raw file, and what do they become when loaded into `R`? What else in the file was loaded as missing?
-- [ ] Compute the mean of `score1`. Why do you get `NA`, and how can you fix this? (Hint: look at how `na.rm` was used in the notes.)
-- [ ] Look at the row for Henry Zhao. Are his scores really `0`? What happens to the mean of `score1` and of `average` if he is excluded?
+- [x] How are missing scores recorded in the raw file, and what do they become when loaded into `R`? What else in the file was loaded as missing?
+- [x] Compute the mean of `score1`. Why do you get `NA`, and how can you fix this? (Hint: look at how `na.rm` was used in the notes.)
+- [x] Look at the row for Henry Zhao. Are his scores really `0`? What happens to the mean of `score1` and of `average` if he is excluded?
 
 ::: {.solution}
+```{r}
+data1
+
+mean(data1$score1,na.rm = TRUE)
+
+data1 |>
+  filter(name != "Henry Zhao") |>
+  summarise(mean_score1 = mean(score1, na.rm = TRUE))
+
+data1 |>
+  summarise(mean_average = mean(average, na.rm = TRUE))
+
+data1 |>
+  filter(name != "Henry Zhao") |>
+  summarise(mean_average = mean(average, na.rm = TRUE))
+```
+Missing scores are recorded as empty fields and become NA in R. Ivy Chen’s empty notes field is also read as NA.
+
+The mean is NA because score1 contains a missing value. Using na.rm = TRUE excludes it from the calculation.
+
+Henry’s notes say “Absent”, so his zeros represent absence rather than actual test scores. Excluding him increases the mean of score1 from 71.28 to 80.19, and the mean of average from 71.40 to 79.33.
 
 :::
 
 The file `data2.txt` contains readings from air quality monitoring stations.
 
-- [ ] Create a `tibble` containing only `station_id` and the particulate matter readings (the columns measured in µg/m³). Use a tidyselect helper rather than typing out the column names.
+- [x] Create a `tibble` containing only `station_id` and the particulate matter readings (the columns measured in µg/m³). Use a tidyselect helper rather than typing out the column names.
 
 ::: {.solution}
+```{r}
+data2 |> 
+  select(station_id,ends_with("_ug_m3"))
+```
+
 
 :::
 
-- [ ] How many readings are there in the file, and from how many different neighbourhoods? (Hint: look at the "Other Summarise Functions" tip in the notes.)
+- [x] How many readings are there in the file, and from how many different neighbourhoods? (Hint: look at the "Other Summarise Functions" tip in the notes.)
 
 ::: {.solution}
+```{r}
+data2 |>
+  summarise(
+    readings = n(),
+    neighbourhoods = n_distinct(neighborhood)
+  )
+```
+
 
 :::
 
-- [ ] Which readings have a `status` other than `OK`? What do you notice about their pollution readings and `sensor_uptime_pct`?
+- [x] Which readings have a `status` other than `OK`? What do you notice about their pollution readings and `sensor_uptime_pct`?
 - [ ] Compute the mean `pm2_5_ug_m3` over all readings, and over only the readings with status `OK`. Which would you report, and why?
 
 ::: {.solution}
+```{r}
+data2 |>
+  filter(status != "OK")
+
+data2 |>
+  summarise(mean_pm2_5 = mean(pm2_5_ug_m3, na.rm = TRUE))
+
+data2 |>
+  filter(status == "OK") |>
+  summarise(mean_pm2_5 = mean(pm2_5_ug_m3, na.rm = TRUE))
+```
+I would report the mean for readings with status “OK”, approximately 41.07 µg/m³, because maintenance and error readings may be unreliable.
+
 
 :::
 
@@ -100,41 +165,109 @@ For the next few tasks you should use `dplyr` functions, using pipe syntax.
 Try to format your code nicely so it is readable.
 
 
-- [ ] Add a new column to the `tibble` called `volume` that contains the volume of the diamond ($x \times y \times z$).
+- [x] Add a new column to the `tibble` called `volume` that contains the volume of the diamond ($x \times y \times z$).
 
 
 ::: {.solution}
+```{r}
+diamonds <- diamonds |>
+  mutate(volume = x * y * z)
 
+head(diamonds)
+```
 :::
 
-- [ ] Create a `tibble` containing only the numeric columns of `diamonds`. (Hint: look at the tidyselect callout in the notes.)
+- [x] Create a `tibble` containing only the numeric columns of `diamonds`. (Hint: look at the tidyselect callout in the notes.)
 
 ::: {.solution}
+```{r}
+diamonds_numeric <- diamonds |>
+  select(where(is.numeric))
 
+head(diamonds_numeric)
+```
 :::
 
 Now answer the following research questions.
 
-- [ ] What is the average price of all the diamonds in the dataset?
-- [ ] What is the volume of the 5 highest priced diamonds?
-- [ ] What is the average, minimum and maximum price of diamonds for each cut?
-- [ ] Ideal is the best cut, yet it has the lowest average price. Can you explain why? (Hint: compare the average `carat` of each cut.)
-- [ ] For each cut, what is the average price-per-carat for diamonds with that cut?
-- [ ] What are the most common combinations of cut and colour? (Hint: look up the `count` function)
-- [ ] Create a `tibble` containing diamonds that are "unusually" large (having volume more than three standard deviations from the mean volume)?
+- [x] What is the average price of all the diamonds in the dataset?
+- [x] What is the volume of the 5 highest priced diamonds?
+- [x] What is the average, minimum and maximum price of diamonds for each cut?
+- [x] Ideal is the best cut, yet it has the lowest average price. Can you explain why? (Hint: compare the average `carat` of each cut.)
+- [x] For each cut, what is the average price-per-carat for diamonds with that cut?
+- [x] What are the most common combinations of cut and colour? (Hint: look up the `count` function)
+- [x] Create a `tibble` containing diamonds that are "unusually" large (having volume more than three standard deviations from the mean volume)?
 
 ::: {.solution}
+```{r}
+diamonds |>
+  summarise(mean_price = mean(price))
+
+diamonds |>
+  arrange(desc(price)) |>
+  head(5) |>
+  select(price, volume)
+
+diamonds |>
+  group_by(cut) |>
+  summarise(
+    mean_price = mean(price),
+    min_price = min(price),
+    max_price = max(price)
+  )
+
+diamonds |>
+  group_by(cut) |>
+  summarise(mean_carat = mean(carat))
+
+diamonds |>
+  group_by(cut) |>
+  summarise(mean_price_per_carat = mean(price / carat))
+
+diamonds |>
+  count(cut, color, sort = TRUE)
+
+diamonds_large <- diamonds |>
+  filter(volume > mean(volume) + 3 * sd(volume))
+
+diamonds_large
+```
 
 :::
 
 Before trusting these results, it is worth checking whether they make sense. Since all diamonds have the same density, heavier diamonds are larger, so `carat` and `volume` should be closely related.
 
-- [ ] Look at the largest few diamonds in your answer. Given their `carat`, are their volumes plausible?
-- [ ] Add a new column called `volume_per_carat` containing the ratio of `volume` to `carat`. Look at the diamonds with the smallest and largest values of this ratio. Does this suggest there any errors in the dataset?
-- [ ] Create a new `tibble` called `diamonds_clean` that keeps only diamonds with `volume_per_carat` between 100 and 250. How many diamonds did you remove?
-- [ ] Repeat the "unusually large" question using `diamonds_clean`. How many diamonds do you find now, and why has the number changed?
+- [x] Look at the largest few diamonds in your answer. Given their `carat`, are their volumes plausible?
+- [x] Add a new column called `volume_per_carat` containing the ratio of `volume` to `carat`. Look at the diamonds with the smallest and largest values of this ratio. Does this suggest there any errors in the dataset?
+- [x] Create a new `tibble` called `diamonds_clean` that keeps only diamonds with `volume_per_carat` between 100 and 250. How many diamonds did you remove?
+- [x] Repeat the "unusually large" question using `diamonds_clean`. How many diamonds do you find now, and why has the number changed?
 
 ::: {.solution}
+```{r}
+diamonds_large |>
+  arrange(desc(volume)) |>
+  select(carat, x, y, z, volume) |>
+  head()
+
+diamonds |>
+  arrange(volume_per_carat) |>
+  select(carat, volume, volume_per_carat) |>
+  head()
+
+diamonds |>
+  arrange(desc(volume_per_carat)) |>
+  select(carat, volume, volume_per_carat) |>
+  head()
+
+diamonds_clean <- diamonds |>
+  filter(
+    volume_per_carat >= 100,
+    volume_per_carat <= 250
+  )
+
+nrow(diamonds) - nrow(diamonds_clean)
+```
+The largest diamond by volume weighs only about 2 carats. Its unusually large volume suggests a possible error in the recorded dimensions.
 
 :::
 
@@ -151,22 +284,58 @@ The file `data/part3/assessment.csv` contains a messy student scores table.
 It records the student's scores out of 100 across 8 possible assessments.
 However, not all students take all assessments, and assessments the student has not taken are recorded as `NA`.
 
-- [ ] Load the file and look at it. Recall the three rules of tidy data from the notes. Is this table tidy? If not, which rule(s) does it break?
+- [x] Load the file and look at it. Recall the three rules of tidy data from the notes. Is this table tidy? If not, which rule(s) does it break?
+
+The table is not tidy. Assessment names are stored as column headings rather than values in a column. Each row should represent one student’s score for one assessment, with separate columns for student ID, assessment and score.
 
 ::: {.solution}
+```{r}
+#| message: false
+assessment <- read_csv("data/part3/assessment.csv")
+assessment
+
+assessment_long <- assessment |>
+  pivot_longer(
+    cols = -student_id,
+    names_to = "assessment",
+    values_to = "score",
+    values_drop_na = TRUE
+  )
+
+assessment_long
+```
+
 
 :::
 
-- [ ] Tidy the table: pivot into long format with one row per student and assessment, and drop missing scores.
-- [ ] Compute each student's overall average, and the number of assessments they took. (Hint: look at the "Other Summarise Functions" tip in the notes.)
+- [x] Tidy the table: pivot into long format with one row per student and assessment, and drop missing scores.
+- [x]ompute each student's overall average, and the number of assessments they took. (Hint: look at the "Other Summarise Functions" tip in the notes.)
 
 ::: {.solution}
+```{r}
+assessment_long |>
+  group_by(student_id) |>
+  summarise(
+    average_score = mean(score),
+    assessments_taken = n()
+  )
+```
 
 :::
 
-- [ ] Redo the pivot, this time using `starts_with` to choose the columns to pivot. Check you get the same result. Suppose a new column `student_name` were added to the file: which of the two approaches would still work, and why?
+- [x] Redo the pivot, this time using `starts_with` to choose the columns to pivot. Check you get the same result. Suppose a new column `student_name` were added to the file: which of the two approaches would still work, and why?
 
 ::: {.solution}
+```{r}
+assessment_long2 <- assessment |>
+  pivot_longer(
+    cols = starts_with("Semester"),
+    names_to = "assessment",
+    values_to = "score",
+    values_drop_na = TRUE
+  )
+identical(assessment_long, assessment_long2)
+```
 
 :::
 
@@ -174,16 +343,43 @@ One of the key principles of tidy data is that each cell should contain only one
 Notice that in the new dataset, the column `assessment` contains *two* values: the Semester and the Assessment ID,
 separated by an `_`.
 
-- [ ] Use `separate_wider_delim` to split `assessment` into two columns, one with the assessment ID and one with the Semester.
+- [x] Use `separate_wider_delim` to split `assessment` into two columns, one with the assessment ID and one with the Semester.
 - [ ] Create a wide table with one row per student, and two new columns containing the average score in Semester 1 and Semester 2.
 
 ::: {.solution}
+```{r}
+assessment_separated <- assessment_long |>
+  separate_wider_delim(
+    assessment,
+    delim = "_",
+    names = c("semester", "assessment_id")
+  )
+
+assessment_separated
+
+semester_averages <- assessment_separated |>
+  group_by(student_id, semester) |>
+  summarise(
+    average_score = mean(score),
+    .groups = "drop"
+  ) |>
+  pivot_wider(
+    names_from = semester,
+    values_from = average_score
+  )
+
+semester_averages
+```
 
 :::
 
 - [ ] Add a column `improvement` to the wide table showing how much each student's average score changed from Semester 1 to Semester 2. Which students improved the most, and which declined the most?
 
 ::: {.solution}
+```{r}
+semester_averages <- semester_averages |>
+  mutate(improvement = Semester2 - Semester1)
+```
 
 :::
 
